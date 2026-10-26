@@ -1,5 +1,5 @@
 -- MS-04 Notificaciones | MySQL 5.7 / 8.x / MariaDB | MySQL Workbench
--- Coincide con las entidades Java Notification y NotificationAttempt
+-- Esquema de notificaciones y reintentos; coincide con las entidades Java.
 
 CREATE DATABASE IF NOT EXISTS ms_notifications
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS notifications (
   title            VARCHAR(200) NOT NULL,
   content          TEXT         NOT NULL,
   type             VARCHAR(50)  NOT NULL,
-  status           VARCHAR(30)  NOT NULL DEFAULT 'PENDING',  -- estado de ENTREGA: PENDING, SENT, FAILED
-  is_read          TINYINT(1)   NOT NULL DEFAULT 0,          -- estado de LECTURA (aparte de la entrega)
+  status           VARCHAR(30)  NOT NULL DEFAULT 'PENDING',  -- estado de entrega
+  is_read          TINYINT(1)   NOT NULL DEFAULT 0,          -- estado de lectura, independiente de entrega
   read_at          DATETIME(3)  NULL,
   idempotency_key  VARCHAR(120) NULL,
   retry_count      INT          NOT NULL DEFAULT 0,
