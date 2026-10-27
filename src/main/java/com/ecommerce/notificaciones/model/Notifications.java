@@ -30,7 +30,7 @@ import java.time.Instant;
                 @Index(name = "ix_notif_type", columnList = "type")
         }
 )
-public class Notification {
+public class Notifications {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -95,10 +95,10 @@ public class Notification {
         }
     }
 
-    public Notification() {
+    public Notifications() {
     }
 
-    public Notification(String idReceiver, String title, String content, String type) {
+    public Notifications(String idReceiver, String title, String content, String type) {
         this.idReceiver = idReceiver;
         this.title = title;
         this.content = content;

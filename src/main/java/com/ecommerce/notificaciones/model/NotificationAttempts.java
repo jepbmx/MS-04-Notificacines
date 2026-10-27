@@ -15,7 +15,7 @@ import java.time.Instant;
                 columnNames = {"id_notification", "attempt_number"}
         )
 )
-public class NotificationAttempt {
+public class NotificationAttempts {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +25,7 @@ public class NotificationAttempt {
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_notification", nullable = false)
-    private Notification notification;
+    private Notifications notification;
 
     @Positive
     @NotNull
@@ -55,11 +55,11 @@ public class NotificationAttempt {
         }
     }
 
-    public NotificationAttempt() {
+    public NotificationAttempts() {
     }
 
-    public NotificationAttempt(Notification notification, Integer attemptNumber, AttemptStatus status,
-                               String errorCode, String errorMessage) {
+    public NotificationAttempts(Notifications notification, Integer attemptNumber, AttemptStatus status,
+                                String errorCode, String errorMessage) {
         this.notification = notification;
         this.attemptNumber = attemptNumber;
         this.status = status;
@@ -75,11 +75,11 @@ public class NotificationAttempt {
         this.idAttempt = idAttempt;
     }
 
-    public Notification getNotification() {
+    public Notifications getNotification() {
         return notification;
     }
 
-    public void setNotification(Notification notification) {
+    public void setNotification(Notifications notification) {
         this.notification = notification;
     }
 

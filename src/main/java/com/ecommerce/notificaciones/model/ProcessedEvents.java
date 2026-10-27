@@ -37,7 +37,7 @@ public class ProcessedEvents {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_notification", nullable = false, unique = true)
-    private Notification notification;
+    private Notifications notification;
 
     @Column(name = "processed_at", nullable = false, updatable = false)
     private Instant processedAt;
@@ -45,7 +45,7 @@ public class ProcessedEvents {
     public ProcessedEvents() {
     }
 
-    public ProcessedEvents(String eventId, String eventType, Notification notification) {
+    public ProcessedEvents(String eventId, String eventType, Notifications notification) {
         this.eventId = eventId;
         this.eventType = eventType;
         this.notification = notification;
@@ -74,11 +74,11 @@ public class ProcessedEvents {
         this.eventType = eventType;
     }
 
-    public Notification getNotification() {
+    public Notifications getNotification() {
         return notification;
     }
 
-    public void setNotification(Notification notification) {
+    public void setNotification(Notifications notification) {
         this.notification = notification;
     }
 
