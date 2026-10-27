@@ -2,6 +2,7 @@ package com.ecommerce.notificaciones.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.ecommerce.notificaciones.model.AttemptStatus;
 
 @Entity
 @Table(name = "notification_attempts")
