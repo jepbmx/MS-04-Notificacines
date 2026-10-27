@@ -1,22 +1,20 @@
 
 package com.ecommerce.notificaciones.controller;
 
+import com.ecommerce.notificaciones.dto.CreateNotificationRequest;
 import com.ecommerce.notificaciones.dto.NotificationResponse;
 import com.ecommerce.notificaciones.service.NotificationService;
-
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -28,6 +26,30 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
+
+    // POST /api/notifications
+    @PostMapping
+    public ResponseEntity<NotificationResponse> create(
+            @Valid @RequestBody CreateNotificationRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false)
+            String idempotencyKey) {
+
+        NotificationService.CreationResult result =
+                notificationService.create(request, idempotencyKey);
+
+        if (!result.created()) {
+            return ResponseEntity.ok(result.notification());
+        }
+
+        URI location = URI.create(
+                "/api/notifications/" + result.notification().id()
+        );
+
+        return ResponseEntity.created(location)
+                .body(result.notification());
+    }
+
+    // GET /api/notifications/me
     @GetMapping("/me")
     public ResponseEntity<Page<NotificationResponse>> getMyNotifications(
             @AuthenticationPrincipal Jwt jwt,
@@ -52,6 +74,7 @@ public class NotificationController {
         );
     }
 
+    // PATCH /api/notifications/{id}/read
     @PatchMapping("/{id}/read")
     public ResponseEntity<NotificationResponse> markAsRead(
             @PathVariable("id") Integer idNotification,
@@ -68,4 +91,6 @@ public class NotificationController {
                 )
         );
     }
+
+
 }

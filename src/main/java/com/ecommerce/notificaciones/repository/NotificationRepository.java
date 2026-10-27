@@ -5,9 +5,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface NotificationRepository
-        extends JpaRepository<Notifications, Integer> {
+import java.util.Optional;
 
+public interface NotificationRepository extends JpaRepository<Notifications, Integer> {
+    // Busca una notificación ya creada con esa clave de idempotencia
+    Optional<Notifications> findByIdempotencyKey(String idempotencyKey);
     Page<Notifications> findByIdReceiver(
             String idReceiver,
             Pageable pageable
