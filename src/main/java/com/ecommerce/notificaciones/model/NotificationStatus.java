@@ -5,5 +5,6 @@ public enum NotificationStatus {
     PROCESSING,
     SENT,
     FAILED,
-    CANCELLED
+    CANCELLED,
+    READ,
 }
