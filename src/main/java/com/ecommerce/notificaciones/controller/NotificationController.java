@@ -3,6 +3,7 @@ package com.ecommerce.notificaciones.controller;
 
 import com.ecommerce.notificaciones.dto.CreateNotificationRequest;
 import com.ecommerce.notificaciones.dto.NotificationResponse;
+import com.ecommerce.notificaciones.dto.NotificationStatusResponse;
 import com.ecommerce.notificaciones.model.NotificationStatus;
 import com.ecommerce.notificaciones.service.NotificationService;
 import jakarta.validation.Valid;
@@ -15,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import com.ecommerce.notificaciones.exception.ApiException;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
@@ -61,9 +64,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Number userId = jwt.getClaim("userId");
-        assert userId != null;
-        String idReceiver = userId.toString();
+        String idReceiver = currentUserId(jwt);
 
         Pageable pageable = PageRequest.of(
                 page,
@@ -178,9 +179,7 @@ public class NotificationController {
             @PathVariable("id") Integer idNotification,
             @AuthenticationPrincipal Jwt jwt) {
 
-        Number userId = jwt.getClaim("userId");
-        assert userId != null;
-        String idReceiver = userId.toString();
+        String idReceiver = currentUserId(jwt);
 
         return ResponseEntity.ok(
                 notificationService.markNotificationAsRead(
@@ -188,6 +187,31 @@ public class NotificationController {
                         idReceiver
                 )
         );
+    }
+
+    // GET /api/notifications/{id}/status
+    @GetMapping("/{id}/status")
+    public ResponseEntity<NotificationStatusResponse> getStatus(
+            @PathVariable("id") Integer idNotification,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String idReceiver = currentUserId(jwt);
+
+        return ResponseEntity.ok(
+                notificationService.getNotificationStatus(idNotification, idReceiver)
+        );
+    }
+
+    private String currentUserId(Jwt jwt) {
+        Number userId = jwt.getClaim("userId");
+        if (userId == null) {
+            throw new ApiException(
+                    HttpStatus.UNAUTHORIZED,
+                    "INVALID_TOKEN",
+                    "El token no contiene el identificador del usuario"
+            );
+        }
+        return userId.toString();
     }
 
 
