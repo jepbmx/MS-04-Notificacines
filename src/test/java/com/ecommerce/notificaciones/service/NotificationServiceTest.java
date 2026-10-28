@@ -38,6 +38,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
+    @Mock
+    private NotificationDeliveryService deliveryService;
 
     @Mock
     private NotificationRepository notificationRepository;
@@ -197,12 +199,12 @@ class NotificationServiceTest {
         when(notificationRepository.findById(99))
                 .thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        ApiException exception = assertThrows(
+                ApiException.class,
                 () -> notificationService.markNotificationAsRead(99, "1")
         );
 
-        assertEquals(404, exception.getStatusCode().value());
+        assertEquals(404, exception.getStatus().value());
     }
 
     @Test
@@ -210,12 +212,12 @@ class NotificationServiceTest {
         when(notificationRepository.findById(1))
                 .thenReturn(Optional.of(notification));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        ApiException exception = assertThrows(
+                ApiException.class,
                 () -> notificationService.markNotificationAsRead(1, "2")
         );
 
-        assertEquals(404, exception.getStatusCode().value());
+        assertEquals(404, exception.getStatus().value());
         assertNull(notification.getReadAt());
     }
 

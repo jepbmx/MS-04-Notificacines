@@ -37,6 +37,8 @@ class SecurityConfigCoverageTest {
 
     @MockitoBean
     private NotificationService notificationService;
+    @MockitoBean
+    private com.ecommerce.notificaciones.service.NotificationDeliveryService deliveryService;
 
     @Test
     void rejectsPostWhenRoleIsMissingOrBlank() throws Exception {

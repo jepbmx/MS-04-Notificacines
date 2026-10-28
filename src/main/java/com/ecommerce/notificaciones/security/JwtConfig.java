@@ -44,7 +44,7 @@ public class JwtConfig {
                 .build();
 
         OAuth2TokenValidator<Jwt> userIdValidator = jwt ->
-                jwt.getClaim("userId") instanceof Number
+                validUserId(jwt.getClaim("userId"))
                         ? OAuth2TokenValidatorResult.success()
                         : OAuth2TokenValidatorResult.failure(
                                 new OAuth2Error(
@@ -60,5 +60,11 @@ public class JwtConfig {
         ));
 
         return decoder;
+    }
+
+    private boolean validUserId(Object claim) {
+        if (!(claim instanceof Number)) return false;
+        try { return new java.math.BigDecimal(claim.toString()).longValueExact() > 0; }
+        catch (ArithmeticException | NumberFormatException ex) { return false; }
     }
 }
