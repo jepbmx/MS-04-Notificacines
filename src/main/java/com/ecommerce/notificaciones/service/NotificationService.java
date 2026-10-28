@@ -3,6 +3,7 @@ package com.ecommerce.notificaciones.service;
 
 import com.ecommerce.notificaciones.dto.CreateNotificationRequest;
 import com.ecommerce.notificaciones.dto.NotificationResponse;
+import com.ecommerce.notificaciones.dto.NotificationStatusResponse;
 import com.ecommerce.notificaciones.exception.ApiException;
 import com.ecommerce.notificaciones.model.NotificationTemplates;
 import com.ecommerce.notificaciones.model.Notifications;
@@ -184,14 +185,16 @@ public class NotificationService {
 
         Notifications notification = notificationRepository
                 .findById(idNotification)
-                .orElseThrow(() -> new ResponseStatusException(
+                .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND,
+                        "NOTIFICATION_NOT_FOUND",
                         "Notificación no encontrada"
                 ));
 
         if (!notification.getIdReceiver().equals(idReceiver)) {
-            throw new ResponseStatusException(
+            throw new ApiException(
                     HttpStatus.NOT_FOUND,
+                    "NOTIFICATION_NOT_FOUND",
                     "Notificación no encontrada"
             );
         }
@@ -232,6 +235,29 @@ public class NotificationService {
 
         matcher.appendTail(result);
         return result.toString();
+    }
+
+    // GET /api/notifications/{id}/status
+    @Transactional(readOnly = true)
+    public NotificationStatusResponse getNotificationStatus(
+            Integer idNotification,
+            String idReceiver
+    ) {
+        if (idReceiver == null || idReceiver.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El identificador del usuario es obligatorio"
+            );
+        }
+
+        Notifications notification = notificationRepository
+                .findByIdNotificationAndIdReceiver(idNotification, idReceiver)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "NOTIFICATION_NOT_FOUND",
+                        "Notificación no encontrada"
+                ));
+
+        return NotificationStatusResponse.from(notification);
     }
 
     private boolean isBlank(String value) {

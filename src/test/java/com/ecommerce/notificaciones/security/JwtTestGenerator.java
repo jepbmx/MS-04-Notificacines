@@ -44,6 +44,7 @@ public class JwtTestGenerator {
         String email = "cliente@ejemplo.com";
         String role = "CLIENTE";
 
+
         Instant now = Instant.now();
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
