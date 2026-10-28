@@ -4,7 +4,12 @@ package com.ecommerce.notificaciones.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -38,9 +43,21 @@ public class JwtConfig {
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
 
-        decoder.setJwtValidator(
-                JwtValidators.createDefaultWithIssuer("Users-MS")
-        );
+        OAuth2TokenValidator<Jwt> userIdValidator = jwt ->
+                jwt.getClaim("userId") instanceof Number
+                        ? OAuth2TokenValidatorResult.success()
+                        : OAuth2TokenValidatorResult.failure(
+                                new OAuth2Error(
+                                        "invalid_token",
+                                        "El token debe incluir el claim numérico userId",
+                                        null
+                                )
+                        );
+
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer("Users-MS"),
+                userIdValidator
+        ));
 
         return decoder;
     }
