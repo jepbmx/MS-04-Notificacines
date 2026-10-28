@@ -6,6 +6,8 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
+import org.springframework.core.env.StandardEnvironment;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -16,11 +18,15 @@ public class JwtTestGenerator {
 
     public static void main(String[] args) throws Exception {
 
-        String secret = System.getenv("JWT_SECRET");
+        // Carga las mismas propiedades que la aplicacion, sin iniciar MySQL ni el servidor.
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.setActiveProfiles("local");
+        ConfigDataEnvironmentPostProcessor.applyTo(environment);
+        String secret = environment.getProperty("jwt.secret");
 
         if (secret == null || secret.isBlank()) {
             throw new IllegalStateException(
-                    "Debes configurar JWT_SECRET"
+                    "Configura JWT_SECRET en config/local.properties o en el entorno"
             );
         }
 
@@ -34,7 +40,7 @@ public class JwtTestGenerator {
         }
 
         // Datos simulados del usuario autenticado
-        Long userId = 2L;
+        Long userId = 1L;
         String email = "cliente@ejemplo.com";
         String role = "CLIENTE";
 
