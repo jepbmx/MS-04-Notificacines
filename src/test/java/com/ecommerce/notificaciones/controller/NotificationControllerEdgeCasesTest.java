@@ -144,9 +144,9 @@ class NotificationControllerEdgeCasesTest {
                 .subject("user@example.test")
                 .build();
 
-        assertThrows(AssertionError.class, () ->
+        assertThrows(com.ecommerce.notificaciones.exception.ApiException.class, () ->
                 controller.getMyNotifications(missingUserId, 0, 10));
-        assertThrows(AssertionError.class, () ->
+        assertThrows(com.ecommerce.notificaciones.exception.ApiException.class, () ->
                 controller.markAsRead(1, missingUserId));
         verifyNoInteractions(notificationService);
     }
