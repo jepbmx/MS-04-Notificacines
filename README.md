@@ -22,7 +22,7 @@ Base: `/api/notifications`. Se conserva el contrato sin `/v1` del documento MS-0
 | GET | /{id} | Propietario; 404 para ajenas o inexistentes |
 | GET | /{id}/status | Propietario; entrega, lectura, fechas y elegibilidad de reintento |
 | PATCH | /{id}/read | Propietario; 200, idempotente y sin body |
-| POST | /{id}/retry | SERVICE o ADMINISTRADOR; operacion administrativa sobre cualquier destinatario; 200 con estado de entrega |
+| POST | /{id}/retry | Solo ADMINISTRADOR; operacion sobre cualquier destinatario; 202 y PENDING |
 
 JWT: `iss=Users-MS`, `userId` entero numerico positivo y rol sin prefijo ROLE_. Tokens locales: ejecutar `JwtTestGenerator` con argumentos `4 CLIENTE` o `4 SERVICE`. El tercer argumento opcional es email; sin argumentos conserva usuario 4 CLIENTE. Usa la misma configuracion local; expira en 15 minutos. En Bruno pegar solo el JWT en Auth > Bearer Token.
 
@@ -44,7 +44,9 @@ La creacion nueva registra el intento inicial (numero 1) dentro de la transaccio
 
 En perfil local, `app.notifications.simulator.demo-types=true` habilita DEMO_FAIL_ONCE (falla inicialmente y luego envia) y DEMO_ALWAYS_FAIL (siempre falla). Fuera de local esta desactivado por defecto. `app.notifications.simulator.fail-for-receivers` acepta IDs separados por comas y fuerza fallo permanente, con prioridad sobre los tipos demo.
 
-Solo FAILED con retry_count < max_retries admite reintento. Maximo predeterminado: 3 reintentos, ademas del intento inicial (4 intentos totales). Se conserva el ID y la lectura; cada reintento agrega historial. Estado incompatible o limite agotado: 409 RETRY_NOT_ALLOWED. El bloqueo pesimista serializa reintentos del mismo registro y la restriccion unica protege numero de intento por notificacion.
+La solicitud de reintento pertenece al PR 16 y se conserva sin modificar: solo ADMINISTRADOR, HTTP 202, mismo ID, retry_count incrementado y estado PENDING. Se rechaza con 409 NOTIFICATION_NOT_RETRYABLE si el estado no es FAILED o el limite ya esta agotado. Maximo predeterminado: 3 reintentos.
+
+**Pendiente del flujo de retry:** no existe procesador posterior, no se realiza otra entrega y no se agrega un intento al historial. Una segunda solicitud sobre PENDING responde 409. No se conserva el bloqueo pesimista ni el reintento sincrono de nuestra implementacion anterior. La demostracion integral de fallo y reenvio del documento MS-04 permanece parcial hasta que el responsable complete ese flujo. No se atribuye a las pruebas una garantia de concurrencia del retry.
 
 PENDING y PROCESSING son estados transitorios; CANCELLED esta soportado para consulta pero no se expone una operacion de cancelacion (no solicitada). Los registros PENDING insertados manualmente no se procesan en segundo plano.
 
@@ -55,6 +57,7 @@ Formato comun: `timestamp`, `status`, `code`, `message`, `path`. No se devuelven
 | HTTP | Uso |
 |---|---|
 | 200 / 201 | Consulta/actualizacion/repeticion; creacion nueva |
+| 202 | Solicitud administrativa de reintento aceptada; procesamiento posterior pendiente |
 | 400 | JSON, parametros, tamano de pagina o identificador invalidos |
 | 401 | JWT ausente, invalido, expirado o sin userId numerico valido |
 | 403 | Rol insuficiente para crear o reintentar |
@@ -76,7 +79,7 @@ Las transacciones agrupan notificacion, evento e intento. La lectura usa dirty c
 .\mvnw.cmd clean verify
 ```
 
-Perfil test usa H2 aislada compatible con MySQL, sin credenciales locales y sin tocar la base personal. Incluye contratos HTTP con JWT firmado, filtros y sort reales, persistencia, idempotencia, propiedad, limites y concurrencia. JaCoCo: `target/site/jacoco/index.html`; no se promete 100% ni se excluyen reglas para inflar cobertura. CI ejecuta tambien contra MySQL con el esquema SQL y publica cobertura.
+Perfil test usa H2 aislada compatible con MySQL, sin credenciales locales y sin tocar la base personal. Incluye contratos HTTP con JWT firmado, filtros y sort reales, persistencia, idempotencia y concurrencia de creacion, propiedad y contrato de solicitud de retry. JaCoCo: `target/site/jacoco/index.html`; no se promete 100% ni se excluyen reglas para inflar cobertura. CI ejecuta tambien contra MySQL con el esquema SQL y publica cobertura.
 
 Para datos variados ejecutar `database/qa_notifications.sql` completo en una misma conexion; agrega un lote nuevo sin borrar datos. Ver `docs/DEMOSTRACION.md`, `docs/REQUISITOS.md` y `docs/EQUIPO.md`.
 

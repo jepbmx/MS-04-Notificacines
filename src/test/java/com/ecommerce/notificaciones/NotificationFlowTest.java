@@ -1,7 +1,6 @@
 package com.ecommerce.notificaciones;
 
 import com.ecommerce.notificaciones.repository.*;
-import com.ecommerce.notificaciones.service.NotificationDeliveryService;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.*;
@@ -32,7 +31,6 @@ class NotificationFlowTest {
     @Autowired NotificationAttemptRepository attempts;
     @Autowired ProcessedEventRepository events;
     @Autowired NotificationTemplateRepository templates;
-    @Autowired NotificationDeliveryService delivery;
     final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach void clean() {
@@ -63,7 +61,7 @@ class NotificationFlowTest {
         return json.readTree(response.getResponse().getContentAsString()).get("id").asInt();
     }
 
-    @Test void completeEvaluationFlowAndIdempotency() throws Exception {
+    @Test void creationReadingAndRetryRequestRespectThePeerContract() throws Exception {
         int id = id(create("DEMO_FAIL_ONCE", "flow"));
         assertEquals(1, notifications.count()); assertEquals(1, attempts.count());
         mvc.perform(get("/api/notifications/{id}/status", id).header("Authorization", token(4,"CLIENTE")))
@@ -74,36 +72,40 @@ class NotificationFlowTest {
         var readAt = json.readTree(read.getResponse().getContentAsString()).get("readAt").asText();
         mvc.perform(patch("/api/notifications/{id}/read", id).header("Authorization", token(4,"CLIENTE")))
                 .andExpect(jsonPath("$.readAt").value(readAt));
-        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization", token(4,"SERVICE")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.status").value("SENT")).andExpect(jsonPath("$.read").value(true));
-        assertEquals(1, notifications.count()); assertEquals(2, attempts.count()); assertEquals(1, events.count());
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization", token(4,"ADMINISTRADOR")))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.status").value("PENDING")).andExpect(jsonPath("$.read").value(true));
+        assertEquals(1, notifications.count()); assertEquals(1, attempts.count()); assertEquals(1, events.count());
         mvc.perform(post("/api/notifications").header("Authorization", token(4,"SERVICE"))
                 .header("Idempotency-Key", "flow").contentType("application/json").content(body("DEMO_FAIL_ONCE")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id));
-        assertEquals(2, attempts.count());
+        assertEquals(1, attempts.count());
         mvc.perform(post("/api/notifications").header("Authorization", token(4,"SERVICE"))
                 .header("Idempotency-Key", "flow").contentType("application/json").content(body("OTHER")))
                 .andExpect(status().isConflict());
     }
 
-    @Test void retryLimitAndInvalidStatesAreEnforced() throws Exception {
+    @Test void peerRetryRejectsPendingAndAlreadyExhaustedRecords() throws Exception {
         int id = id(create("DEMO_ALWAYS_FAIL", "limit"));
-        for (int i=0;i<3;i++) mvc.perform(post("/api/notifications/{id}/retry", id)
-                .header("Authorization",token(4,"ADMINISTRADOR")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("FAILED"));
-        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",token(4,"SERVICE")))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("RETRY_NOT_ALLOWED"));
-        assertEquals(4, attempts.count()); assertEquals(3, notifications.findById(id).orElseThrow().getRetryCount());
-        mvc.perform(get("/api/notifications/{id}/status",id).header("Authorization",token(4,"CLIENTE")))
-                .andExpect(jsonPath("$.finalState").value(true)).andExpect(jsonPath("$.willRetry").value(false));
-        mvc.perform(post("/api/notifications/0/retry").header("Authorization",token(4,"SERVICE")))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/notifications/999999/retry").header("Authorization",token(4,"SERVICE")))
-                .andExpect(status().isNotFound());
-        int sent = id(create("ORDER", "sent"));
-        mvc.perform(post("/api/notifications/{id}/retry",sent).header("Authorization",token(4,"SERVICE")))
+        String admin = token(4,"ADMINISTRADOR");
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("PENDING"));
+        assertEquals(1,notifications.findById(id).orElseThrow().getRetryCount());
+        assertEquals(1,attempts.count());
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_RETRYABLE"));
+        var exhausted=notifications.findById(id).orElseThrow();
+        exhausted.setStatus(com.ecommerce.notificaciones.model.NotificationStatus.FAILED);
+        exhausted.setRetryCount(exhausted.getMaxRetries());
+        notifications.saveAndFlush(exhausted);
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
                 .andExpect(status().isConflict());
+        mvc.perform(post("/api/notifications/0/retry").header("Authorization",admin))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/notifications/999999/retry").header("Authorization",admin))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",token(4,"SERVICE")))
+                .andExpect(status().isForbidden());
     }
 
     @Test void ownershipAndRoleRulesApplyOverHttp() throws Exception {
@@ -152,19 +154,6 @@ class NotificationFlowTest {
                     .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.status").value(401))
                     .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
                     .andExpect(header().string("WWW-Authenticate","Bearer"));
-    }
-
-    @Test void concurrentRetriesCannotCreateDuplicateAttempts() throws Exception {
-        int id = id(create("DEMO_FAIL_ONCE", "concurrency"));
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-        CountDownLatch gate = new CountDownLatch(1);
-        Callable<Boolean> call = () -> { gate.await(); try { delivery.retry(id); return true; }
-            catch(com.ecommerce.notificaciones.exception.ApiException ex) { assertEquals(409,ex.getStatus().value()); return false; } };
-        try {
-            var a=pool.submit(call); var b=pool.submit(call); gate.countDown();
-            assertNotEquals(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS));
-            assertEquals(1,notifications.count()); assertEquals(2,attempts.count());
-        } finally { pool.shutdownNow(); }
     }
 
     @Test void swaggerDescribesAllSevenRoutes() throws Exception {

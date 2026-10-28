@@ -7,12 +7,12 @@ La evaluacion requiere dominio individual y seguimiento real de ramas, commits y
 | Diana: POST registro | DTO, validacion, plantillas, Idempotency-Key, transaccion, 201/200/409 |
 | Gerardo: consulta ID y filtros | Propiedad, 404, consultas JPA, paginacion y sort permitido |
 | Miguel: /me y /read | JWT userId, lectura independiente, idempotencia de readAt, seguridad |
-| Jose Eduardo: /status y /retry | Estados, limite, intentos, bloqueo y reutilizacion del ID |
+| Jose Eduardo: /status y /retry | Estados, limite y reutilizacion del ID; explicar que falta procesar PENDING e historial nuevo |
 
 Preguntas para practicar:
 - Por que id_receiver no tiene FK a la base de otro microservicio?
 - Que evita dos notificaciones con la misma clave y que devuelve una carrera concurrente?
-- Por que el reintento conserva el ID y por que requiere un rol privilegiado?
+- Que falta para ejecutar la entrega tras el 202? Por que el reintento conserva el ID y por que requiere un rol privilegiado?
 - Diferencia entre FAILED/read=false y SENT/read=true. Puede leerse una fallida?
 - Por que max_retries=3 permite cuatro intentos totales?
 - Que significa willRetry si no hay proceso automatico?

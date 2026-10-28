@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/notifications/*/retry")
-                        .hasAnyRole("SERVICE", "ADMINISTRADOR")
+                        .hasRole("ADMINISTRADOR")
 
                         // POST: únicamente SERVICE o ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/notifications")

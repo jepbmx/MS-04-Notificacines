@@ -6,7 +6,6 @@ import com.ecommerce.notificaciones.dto.NotificationResponse;
 import com.ecommerce.notificaciones.dto.NotificationStatusResponse;
 import com.ecommerce.notificaciones.model.NotificationStatus;
 import com.ecommerce.notificaciones.service.NotificationService;
-import com.ecommerce.notificaciones.service.NotificationDeliveryService;
 import org.springframework.web.bind.WebDataBinder;
 import java.beans.PropertyEditorSupport;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,11 +33,9 @@ import java.util.Set;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final NotificationDeliveryService deliveryService;
 
-    public NotificationController(NotificationService notificationService, NotificationDeliveryService deliveryService) {
+    public NotificationController(NotificationService notificationService) {
         this.notificationService = notificationService;
-        this.deliveryService = deliveryService;
     }
 
     @InitBinder("sort")
@@ -232,10 +229,23 @@ public class NotificationController {
         );
     }
 
+    // POST /api/notifications/{id}/retry
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "Solicitud aceptada; notificacion PENDING. Procesamiento posterior pendiente de implementacion")
+    @Operation(summary = "Solicitar reintento", description = "Solo ADMINISTRADOR. Devuelve 202 y deja PENDING con contador incrementado. El procesamiento posterior no esta implementado en PR 16.")
     @PostMapping("/{id}/retry")
-    @Operation(summary = "Reintentar entrega fallida", description = "Solo SERVICE o ADMINISTRADOR. Reutiliza el ID, agrega intento y permite hasta maxRetries reintentos. 409 si no es FAILED o se agoto el limite. Un fallo de entrega se devuelve en status FAILED con HTTP 200.")
-    public ResponseEntity<NotificationResponse> retry(@PathVariable Integer id) {
-        return ResponseEntity.ok(deliveryService.retry(id));
+    public ResponseEntity<NotificationResponse> retry(
+            @PathVariable("id") Integer idNotification,
+            @AuthenticationPrincipal Jwt jwt) {
+        if (idNotification == null || idNotification < 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El identificador debe ser positivo"
+            );
+        }
+
+        return ResponseEntity.accepted().body(
+                notificationService.retryNotification(idNotification)
+        );
     }
 
     private String currentUserId(Jwt jwt) {

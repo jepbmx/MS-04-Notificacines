@@ -9,13 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
-import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.Lock;
 
 public interface NotificationRepository extends JpaRepository<Notifications, Integer> {
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select n from Notifications n where n.idNotification = :id")
-    Optional<Notifications> findLockedById(@Param("id") Integer id);
     Optional<Notifications> findByIdempotencyKey(String idempotencyKey);
     Page<Notifications> findByIdReceiver(
             String idReceiver,

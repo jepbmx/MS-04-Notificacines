@@ -116,6 +116,58 @@ class NotificationServiceTest {
     }
 
     @Test
+    void retryNotification_debeCambiarEstadoIncrementarContadorYGuardar() {
+        notification.setIdNotification(10);
+        notification.setStatus(NotificationStatus.FAILED);
+        notification.setRetryCount(1);
+        when(notificationRepository.findById(10)).thenReturn(Optional.of(notification));
+        when(notificationRepository.save(notification)).thenReturn(notification);
+
+        NotificationResponse response =
+                notificationService.retryNotification(10);
+
+        assertEquals(10, response.id());
+        assertEquals(NotificationStatus.PENDING, response.status());
+        assertEquals(2, notification.getRetryCount());
+        verify(notificationRepository).save(notification);
+    }
+
+    @Test
+    void retryNotification_debeRechazarNotificacionInexistente() {
+        when(notificationRepository.findById(10)).thenReturn(Optional.empty());
+
+        ApiException exception = assertThrows(
+                ApiException.class,
+                () -> notificationService.retryNotification(10)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("NOTIFICATION_NOT_FOUND", exception.getCode());
+        verify(notificationRepository, never()).save(any(Notifications.class));
+    }
+
+    @Test
+    void retryNotification_debeRechazarEstadosNoFallidosYLimiteAlcanzado() {
+        notification.setIdNotification(10);
+        when(notificationRepository.findById(10)).thenReturn(Optional.of(notification));
+
+        ApiException pendingException = assertThrows(
+                ApiException.class,
+                () -> notificationService.retryNotification(10)
+        );
+        assertEquals(HttpStatus.CONFLICT, pendingException.getStatus());
+
+        notification.setStatus(NotificationStatus.FAILED);
+        notification.setRetryCount(notification.getMaxRetries());
+        ApiException exhaustedException = assertThrows(
+                ApiException.class,
+                () -> notificationService.retryNotification(10)
+        );
+        assertEquals(HttpStatus.CONFLICT, exhaustedException.getStatus());
+        verify(notificationRepository, never()).save(any(Notifications.class));
+    }
+
+    @Test
     void searchMyNotifications_debeFiltrarNotificacionesDelUsuario() {
         Pageable pageable = PageRequest.of(0, 10);
         when(notificationRepository.searchByReceiverAndFilters(

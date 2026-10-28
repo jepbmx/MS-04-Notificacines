@@ -226,6 +226,31 @@ public class NotificationService {
                 ));
     }
 
+    // POST /api/notifications/{id}/retry
+    @Transactional
+    public NotificationResponse retryNotification(
+            Integer idNotification
+    ) {
+        Notifications notification = notificationRepository
+                .findById(idNotification)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "NOTIFICATION_NOT_FOUND",
+                        "Notificación no encontrada"
+                ));
+
+        if (!notification.canRetry()) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "NOTIFICATION_NOT_RETRYABLE",
+                    "La notificación no está fallida o alcanzó el máximo de reintentos"
+            );
+        }
+
+        notification.prepareRetry();
+        return NotificationResponse.from(notificationRepository.save(notification));
+    }
+
     // PATCH /api/notifications/{id}/read
     @Transactional
     public NotificationResponse markNotificationAsRead(
