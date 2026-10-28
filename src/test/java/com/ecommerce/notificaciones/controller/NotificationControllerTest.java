@@ -260,6 +260,19 @@ class NotificationControllerTest {
         verify(notificationService).retryNotification(7);
     }
 
+    @Test
+    void retry_debeRechazarIdentificadoresNoPositivos() {
+        assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> notificationController.retry(0, createJwt(25L))
+        );
+        assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> notificationController.retry(-1, createJwt(25L))
+        );
+        verifyNoInteractions(notificationService);
+    }
+
 
     @Test
     void create_debeDevolver201CuandoSeCreaNotificacion() {

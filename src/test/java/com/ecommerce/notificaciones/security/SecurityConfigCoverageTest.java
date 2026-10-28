@@ -93,6 +93,11 @@ class SecurityConfigCoverageTest {
                                 "Bearer " + createToken("CLIENTE")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        mockMvc.perform(get("/api/notifications/10/status")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + createToken("ADMIN")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
 
         when(notificationService.getNotificationStatusForAdmin(10))
                 .thenReturn(new NotificationStatusResponse(
