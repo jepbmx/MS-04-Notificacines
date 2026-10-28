@@ -3,7 +3,8 @@ package com.ecommerce.notificaciones.controller;
 import com.ecommerce.notificaciones.dto.NotificationResponse;
 import com.ecommerce.notificaciones.service.NotificationService;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,9 +24,10 @@ public class NotificationController {
     @GetMapping("/{id}")
     public NotificationResponse getById(
             @PathVariable Integer id,
-            Authentication authentication
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return notificationService.findByIdForReceiver(id, authentication.getName())
+        Number userId = jwt.getClaim("userId");
+        return notificationService.findByIdForReceiver(id, userId.toString())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 }
