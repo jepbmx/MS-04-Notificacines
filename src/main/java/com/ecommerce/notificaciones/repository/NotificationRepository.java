@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface NotificationRepository extends JpaRepository<Notifications, Integer> {
-    // Busca una notificación ya creada con esa clave de idempotencia
     Optional<Notifications> findByIdempotencyKey(String idempotencyKey);
     Page<Notifications> findByIdReceiver(
             String idReceiver,
