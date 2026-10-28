@@ -243,6 +243,22 @@ class NotificationControllerTest {
                 .markNotificationAsRead(7, "1");
     }
 
+    @Test
+    void retry_debeEncolarReintentoYDevolver202() {
+        Jwt jwt = createJwt(25L);
+        NotificationResponse notification = createResponse("25");
+
+        when(notificationService.retryNotification(7))
+                .thenReturn(notification);
+
+        ResponseEntity<NotificationResponse> response =
+                notificationController.retry(7, jwt);
+
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        assertSame(notification, response.getBody());
+        verify(notificationService).retryNotification(7);
+    }
+
 
     @Test
     void create_debeDevolver201CuandoSeCreaNotificacion() {

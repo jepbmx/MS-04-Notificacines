@@ -173,6 +173,23 @@ public class NotificationController {
         );
     }
 
+    // POST /api/notifications/{id}/retry
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<NotificationResponse> retry(
+            @PathVariable("id") Integer idNotification,
+            @AuthenticationPrincipal Jwt jwt) {
+        if (idNotification == null || idNotification < 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El identificador debe ser positivo"
+            );
+        }
+
+        return ResponseEntity.accepted().body(
+                notificationService.retryNotification(idNotification)
+        );
+    }
+
     // PATCH /api/notifications/{id}/read
     @PatchMapping("/{id}/read")
     public ResponseEntity<NotificationResponse> markAsRead(

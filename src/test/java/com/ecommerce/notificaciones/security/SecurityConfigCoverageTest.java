@@ -2,6 +2,8 @@ package com.ecommerce.notificaciones.security;
 
 import com.ecommerce.notificaciones.config.SecurityConfig;
 import com.ecommerce.notificaciones.controller.NotificationController;
+import com.ecommerce.notificaciones.dto.NotificationResponse;
+import com.ecommerce.notificaciones.model.NotificationStatus;
 import com.ecommerce.notificaciones.service.NotificationService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -23,6 +25,8 @@ import java.util.Date;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @WebMvcTest(NotificationController.class)
 @Import({SecurityConfig.class, JwtConfig.class})
@@ -53,6 +57,29 @@ class SecurityConfigCoverageTest {
                         .content("{}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void retriesNotificationOnlyForAdmin() throws Exception {
+        mockMvc.perform(post("/api/notifications/10/retry")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + createToken("CLIENTE")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        when(notificationService.retryNotification(10))
+                .thenReturn(new NotificationResponse(
+                        10, "42", "title", "content", "ORDER",
+                        NotificationStatus.PENDING,
+                        false, Instant.now(), null, null
+                ));
+
+        mockMvc.perform(post("/api/notifications/10/retry")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + createToken("ADMINISTRADOR")))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        verify(notificationService).retryNotification(10);
     }
 
     private String createToken(String role) throws Exception {

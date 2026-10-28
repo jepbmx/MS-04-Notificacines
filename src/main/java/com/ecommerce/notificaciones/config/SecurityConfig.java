@@ -49,6 +49,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/notifications")
                         .hasAnyRole("SERVICE", "ADMINISTRADOR")
 
+                        // El reintento es una operación administrativa.
+                        .requestMatchers(HttpMethod.POST, "/api/notifications/*/retry")
+                        .hasRole("ADMINISTRADOR")
+
                         // GET y PATCH: cualquier usuario autenticado
                         .requestMatchers(
                                 HttpMethod.GET, "/api/notifications/me"
