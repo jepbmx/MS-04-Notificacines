@@ -6,8 +6,10 @@ import com.ecommerce.notificaciones.repository.NotificationRepository;
 import com.ecommerce.notificaciones.repository.NotificationTemplateRepository;
 import com.ecommerce.notificaciones.repository.ProcessedEventRepository;
 import com.ecommerce.notificaciones.dto.CreateNotificationRequest;
+import com.ecommerce.notificaciones.dto.NotificationResponse;
 import com.ecommerce.notificaciones.exception.ApiException;
 import com.ecommerce.notificaciones.model.NotificationTemplates;
+import com.ecommerce.notificaciones.model.NotificationStatus;
 import com.ecommerce.notificaciones.model.ProcessedEvents;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,6 +111,60 @@ class NotificationServiceTest {
         );
 
         verifyNoInteractions(notificationRepository);
+    }
+
+    @Test
+    void searchMyNotifications_debeFiltrarNotificacionesDelUsuario() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(notificationRepository.searchByReceiverAndFilters(
+                "1",
+                "ORDER_CONFIRMED",
+                NotificationStatus.SENT,
+                false,
+                pageable
+        )).thenReturn(new PageImpl<>(List.of(notification)));
+
+        Page<NotificationResponse> result =
+                notificationService.searchMyNotifications(
+                        "1",
+                        " ORDER_CONFIRMED ",
+                        NotificationStatus.SENT,
+                        false,
+                        pageable
+                );
+
+        assertEquals(1, result.getTotalElements());
+        verify(notificationRepository).searchByReceiverAndFilters(
+                "1",
+                "ORDER_CONFIRMED",
+                NotificationStatus.SENT,
+                false,
+                pageable
+        );
+    }
+
+    @Test
+    void getNotificationById_debeRestringirLaConsultaAlPropietario() {
+        when(notificationRepository.findByIdNotificationAndIdReceiver(4, "1"))
+                .thenReturn(Optional.of(notification));
+
+        NotificationResponse result =
+                notificationService.getNotificationById(4, "1");
+
+        assertEquals("1", result.idReceiver());
+        verify(notificationRepository)
+                .findByIdNotificationAndIdReceiver(4, "1");
+    }
+
+    @Test
+    void getNotificationById_debeResponder404SiNoEsDelPropietario() {
+        when(notificationRepository.findByIdNotificationAndIdReceiver(4, "2"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResponseStatusException.class,
+                () -> notificationService.getNotificationById(4, "2")
+        );
     }
 
     @Test

@@ -2,6 +2,7 @@
 package com.ecommerce.notificaciones.controller;
 
 import com.ecommerce.notificaciones.dto.NotificationResponse;
+import com.ecommerce.notificaciones.model.NotificationStatus;
 import com.ecommerce.notificaciones.service.NotificationService;
 import com.ecommerce.notificaciones.dto.CreateNotificationRequest;
 
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -126,6 +128,84 @@ class NotificationControllerTest {
                 org.springframework.data.domain.Sort.Direction.DESC,
                 pageable.getSort().getOrderFor("idNotification").getDirection()
         );
+    }
+
+    @Test
+    void getById_debeConsultarSoloParaElUsuarioDelJwt() {
+        Jwt jwt = createJwt(25L);
+        NotificationResponse notification = createResponse("25");
+        when(notificationService.getNotificationById(7, "25"))
+                .thenReturn(notification);
+
+        ResponseEntity<NotificationResponse> response =
+                notificationController.getById(7, jwt);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(1, response.getBody().id());
+        verify(notificationService).getNotificationById(7, "25");
+    }
+
+    @Test
+    void searchMyNotifications_debeAplicarFiltrosYPaginacion() {
+        Jwt jwt = createJwt(25L);
+        when(notificationService.searchMyNotifications(
+                eq("25"),
+                eq("ORDER_CONFIRMED"),
+                eq(NotificationStatus.SENT),
+                eq(false),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
+
+        ResponseEntity<Page<NotificationResponse>> response =
+                notificationController.searchMyNotifications(
+                        jwt,
+                        "ORDER_CONFIRMED",
+                        NotificationStatus.SENT,
+                        false,
+                        1,
+                        5,
+                        new String[]{"createdAt,asc"}
+                );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        org.mockito.ArgumentCaptor<Pageable> pageableCaptor =
+                org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        verify(notificationService).searchMyNotifications(
+                eq("25"),
+                eq("ORDER_CONFIRMED"),
+                eq(NotificationStatus.SENT),
+                eq(false),
+                pageableCaptor.capture()
+        );
+        assertEquals(1, pageableCaptor.getValue().getPageNumber());
+        assertEquals(5, pageableCaptor.getValue().getPageSize());
+        assertEquals(
+                Sort.Direction.ASC,
+                pageableCaptor.getValue().getSort()
+                        .getOrderFor("createdAt").getDirection()
+        );
+        assertEquals(
+                Sort.Direction.DESC,
+                pageableCaptor.getValue().getSort()
+                        .getOrderFor("idNotification").getDirection()
+        );
+    }
+
+    @Test
+    void searchMyNotifications_debeRechazarTamanoInvalido() {
+        assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> notificationController.searchMyNotifications(
+                        createJwt(25L),
+                        null,
+                        null,
+                        null,
+                        0,
+                        101,
+                        null
+                )
+        );
+        verifyNoInteractions(notificationService);
     }
 
     @Test
