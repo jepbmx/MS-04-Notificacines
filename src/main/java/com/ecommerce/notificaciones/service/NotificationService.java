@@ -39,15 +39,18 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationTemplateRepository templateRepository;
     private final ProcessedEventRepository processedEventRepository;
+    private final NotificationDeliveryService deliveryService;
 
     public NotificationService(
             NotificationRepository notificationRepository,
             NotificationTemplateRepository templateRepository,
-            ProcessedEventRepository processedEventRepository
+            ProcessedEventRepository processedEventRepository,
+            NotificationDeliveryService deliveryService
     ) {
         this.notificationRepository = notificationRepository;
         this.templateRepository = templateRepository;
         this.processedEventRepository = processedEventRepository;
+        this.deliveryService = deliveryService;
     }
 
     // POST /api/notifications
@@ -136,6 +139,11 @@ public class NotificationService {
             );
         }
 
+        if (isBlank(title) || isBlank(content) || content.length() > 5000) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "INVALID_RENDERED_CONTENT", "La plantilla genero contenido vacio o demasiado largo");
+        }
+
         // Registrar la notificación y su clave de idempotencia
         Notifications notification =
                 new Notifications(receiver, title, content, type);
@@ -149,6 +157,7 @@ public class NotificationService {
             );
         }
 
+        deliveryService.deliver(notification);
         return new CreationResult(
                 NotificationResponse.from(notification),
                 true

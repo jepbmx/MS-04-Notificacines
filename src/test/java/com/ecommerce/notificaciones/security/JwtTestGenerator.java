@@ -40,9 +40,12 @@ public class JwtTestGenerator {
         }
 
         // Datos simulados del usuario autenticado
-        Long userId = 11L;
-        String email = "admin@ejemplo.com";
-        String role = "ADMINISTRADOR";
+        Long userId = args.length > 0 ? Long.valueOf(args[0]) : 4L;
+        String role = args.length > 1 ? args[1] : "CLIENTE";
+        String email = args.length > 2 ? args[2] : "cliente@ejemplo.com";
+        if (userId < 1 || !java.util.Set.of("CLIENTE", "SERVICE", "ADMINISTRADOR").contains(role)) {
+            throw new IllegalArgumentException("Uso: userId positivo, rol CLIENTE/SERVICE/ADMINISTRADOR, email opcional");
+        }
 
 
         Instant now = Instant.now();

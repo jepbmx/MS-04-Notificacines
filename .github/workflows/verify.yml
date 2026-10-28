@@ -1,0 +1,64 @@
+name: Verificar Notificaciones
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+          cache: maven
+      - run: mvn -B clean verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pruebas-y-cobertura
+          path: |
+            target/surefire-reports
+            target/site/jacoco
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-only-password
+          MYSQL_DATABASE: ecommerce
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptest-only-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+          cache: maven
+      - name: Preparar esquema real
+        env:
+          MYSQL_PWD: test-only-password
+        run: mysql -h 127.0.0.1 -u root < database/create_tables.sql
+      - name: Contratos con MySQL y validacion del SQL
+        run: >-
+          mvn -B -Dtest=NotificationFlowTest,NotificacionesApplicationTests
+          -Dspring.datasource.url=jdbc:mysql://127.0.0.1:3306/ecommerce
+          -Dspring.datasource.username=root -Dspring.datasource.password=test-only-password
+          -Dspring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+          -Dspring.jpa.hibernate.ddl-auto=validate test
+      - name: Validar datos de demostracion
+        env:
+          MYSQL_PWD: test-only-password
+        run: |
+          mysql -h 127.0.0.1 -u root < database/qa_notifications.sql
+          count=$(mysql -h 127.0.0.1 -u root -N -e "SELECT COUNT(*) FROM ecommerce.notifications WHERE idempotency_key LIKE 'qa-final-%'")
+          test "$count" -eq 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pruebas-mysql
+          path: target/surefire-reports

@@ -19,6 +19,18 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleParameter(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER", "Parametro de solicitud invalido", req);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataAccessResourceFailureException.class)
+    public ResponseEntity<ErrorResponse> handleUnavailable(Exception ex, HttpServletRequest req) {
+        log.error("Persistencia no disponible en {}", req.getRequestURI());
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "DEPENDENCY_UNAVAILABLE",
+                "La persistencia no esta disponible temporalmente", req);
+    }
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // Errores de negocio lanzados desde el servicio (409, 422, etc.)

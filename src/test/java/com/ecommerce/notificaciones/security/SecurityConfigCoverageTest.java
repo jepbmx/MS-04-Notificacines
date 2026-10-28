@@ -4,6 +4,8 @@ import com.ecommerce.notificaciones.config.SecurityConfig;
 import com.ecommerce.notificaciones.controller.NotificationController;
 import com.ecommerce.notificaciones.dto.NotificationResponse;
 import com.ecommerce.notificaciones.model.NotificationStatus;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import com.ecommerce.notificaciones.service.NotificationService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -25,8 +27,6 @@ import java.util.Date;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @WebMvcTest(NotificationController.class)
 @Import({SecurityConfig.class, JwtConfig.class})
@@ -41,6 +41,8 @@ class SecurityConfigCoverageTest {
 
     @MockitoBean
     private NotificationService notificationService;
+    @MockitoBean
+    private com.ecommerce.notificaciones.service.NotificationDeliveryService deliveryService;
 
     @Test
     void rejectsPostWhenRoleIsMissingOrBlank() throws Exception {

@@ -23,7 +23,7 @@ class NotificationServiceValidationCoverageTest {
     private final NotificationService service = new NotificationService(
             notificationRepository,
             templateRepository,
-            mock(ProcessedEventRepository.class)
+            mock(ProcessedEventRepository.class), mock(NotificationDeliveryService.class)
     );
 
     @Test

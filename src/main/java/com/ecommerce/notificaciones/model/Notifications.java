@@ -91,7 +91,7 @@ public class Notifications {
     @PrePersist
     public void prePersist() {
         if (this.createdAt == null) {
-            this.createdAt = Instant.now();
+            this.createdAt = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         }
     }
 
@@ -109,7 +109,7 @@ public class Notifications {
     public void markAsRead() {
         if (!this.read) {
             this.read = true;
-            this.readAt = Instant.now();
+            this.readAt = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         }
     }
 

@@ -13,6 +13,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import tools.jackson.databind.json.JsonMapper;
+import com.ecommerce.notificaciones.exception.ErrorResponse;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -24,6 +28,13 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        AuthenticationEntryPoint unauthorized = (req, res, ex) -> {
+            res.setHeader("WWW-Authenticate", "Bearer");
+            writeError(req, res, 401, "UNAUTHORIZED", "Se requiere autenticacion valida");
+        };
+        AccessDeniedHandler forbidden = (req, res, ex) ->
+                writeError(req, res, 403, "FORBIDDEN", "No tienes permisos para esta operacion");
 
         JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
 
@@ -44,14 +55,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/notifications/*/retry")
+                        .hasRole("ADMINISTRADOR")
 
                         // POST: únicamente SERVICE o ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/notifications")
                         .hasAnyRole("SERVICE", "ADMINISTRADOR")
-
-                        // El reintento es una operación administrativa.
-                        .requestMatchers(HttpMethod.POST, "/api/notifications/*/retry")
-                        .hasRole("ADMINISTRADOR")
 
                         // GET y PATCH: cualquier usuario autenticado
                         .requestMatchers(
@@ -66,14 +76,12 @@ public class SecurityConfig {
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter))
+                        .authenticationEntryPoint(unauthorized)
+                        .accessDeniedHandler(forbidden)
                 )
                 .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((req, res, ex) ->
-                                writeError(req, res, 401, "UNAUTHORIZED",
-                                        "Se requiere autenticación válida"))
-                        .accessDeniedHandler((req, res, ex) ->
-                                writeError(req, res, 403, "FORBIDDEN",
-                                        "No tienes permisos para esta operación"))
+                        .authenticationEntryPoint(unauthorized)
+                        .accessDeniedHandler(forbidden)
                 )
                 .build();
     }
@@ -90,13 +98,8 @@ public class SecurityConfig {
         res.setContentType("application/json");
         res.setCharacterEncoding("UTF-8");
 
-        res.getWriter().write(String.format(
-                "{\"timestamp\":\"%s\",\"status\":%d,\"code\":\"%s\",\"message\":\"%s\",\"path\":\"%s\"}",
-                Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                status,
-                code,
-                message,
-                req.getRequestURI()
-        ));
+        res.getWriter().write(JsonMapper.builder().build().writeValueAsString(
+                new ErrorResponse(Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        status, code, message, req.getRequestURI())));
     }
 }
