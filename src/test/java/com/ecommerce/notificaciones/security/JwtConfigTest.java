@@ -49,6 +49,14 @@ class JwtConfigTest {
         );
     }
 
+    @Test
+    void rejectsSecretShorterThanThirtyTwoBytes() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new JwtConfig().jwtDecoder("too-short")
+        );
+    }
+
     private String createToken(String issuer, Object userId, String jti)
             throws Exception {
         Instant now = Instant.now();
