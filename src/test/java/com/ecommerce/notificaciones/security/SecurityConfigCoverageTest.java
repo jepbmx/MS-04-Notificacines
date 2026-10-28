@@ -3,6 +3,7 @@ package com.ecommerce.notificaciones.security;
 import com.ecommerce.notificaciones.config.SecurityConfig;
 import com.ecommerce.notificaciones.controller.NotificationController;
 import com.ecommerce.notificaciones.dto.NotificationResponse;
+import com.ecommerce.notificaciones.dto.NotificationStatusResponse;
 import com.ecommerce.notificaciones.model.NotificationStatus;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.Date;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -71,17 +73,42 @@ class SecurityConfigCoverageTest {
         when(notificationService.retryNotification(10))
                 .thenReturn(new NotificationResponse(
                         10, "42", "title", "content", "ORDER",
-                        NotificationStatus.PENDING,
+                        NotificationStatus.SENT,
                         false, Instant.now(), null, null
                 ));
 
         mockMvc.perform(post("/api/notifications/10/retry")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + createToken("ADMINISTRADOR")))
-                .andExpect(status().isAccepted())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10))
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("SENT"));
 
         verify(notificationService).retryNotification(10);
+    }
+
+    @Test
+    void administratorCanReadAnyNotificationStatus() throws Exception {
+        mockMvc.perform(get("/api/notifications/10/status")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + createToken("CLIENTE")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        when(notificationService.getNotificationStatusForAdmin(10))
+                .thenReturn(new NotificationStatusResponse(
+                        10, NotificationStatus.FAILED, false, true,
+                        false, Instant.now(), null, null
+                ));
+
+        mockMvc.perform(get("/api/notifications/10/status")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + createToken("ADMINISTRADOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.willRetry").value(true));
+
+        verify(notificationService).getNotificationStatusForAdmin(10);
     }
 
     private String createToken(String role) throws Exception {

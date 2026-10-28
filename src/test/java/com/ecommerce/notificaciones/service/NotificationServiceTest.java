@@ -130,6 +130,7 @@ class NotificationServiceTest {
         assertEquals(NotificationStatus.PENDING, response.status());
         assertEquals(2, notification.getRetryCount());
         verify(notificationRepository).save(notification);
+        verify(deliveryService).deliver(notification);
     }
 
     @Test

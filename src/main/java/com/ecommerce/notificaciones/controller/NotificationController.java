@@ -217,21 +217,25 @@ public class NotificationController {
 
     // GET /api/notifications/{id}/status
     @GetMapping("/{id}/status")
-    @Operation(summary = "Consultar estado de entrega propio", description = "finalState y willRetry indican estado terminal y elegibilidad para reintento manual, respectivamente.")
+    @Operation(summary = "Consultar estado de entrega", description = "Solo ADMINISTRADOR puede consultar el estado de cualquier notificación. finalState y willRetry indican estado terminal y elegibilidad para reintento manual.")
     public ResponseEntity<NotificationStatusResponse> getStatus(
-            @PathVariable("id") Integer idNotification,
-            @AuthenticationPrincipal Jwt jwt) {
+            @PathVariable("id") Integer idNotification) {
 
-        String idReceiver = currentUserId(jwt);
+        if (idNotification == null || idNotification < 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El identificador debe ser positivo"
+            );
+        }
 
         return ResponseEntity.ok(
-                notificationService.getNotificationStatus(idNotification, idReceiver)
+                notificationService.getNotificationStatusForAdmin(idNotification)
         );
     }
 
     // POST /api/notifications/{id}/retry
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "Solicitud aceptada; notificacion PENDING. Procesamiento posterior pendiente de implementacion")
-    @Operation(summary = "Solicitar reintento", description = "Solo ADMINISTRADOR. Devuelve 202 y deja PENDING con contador incrementado. El procesamiento posterior no esta implementado en PR 16.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Reintento procesado y registrado en el historial de intentos")
+    @Operation(summary = "Reintentar notificacion", description = "Solo ADMINISTRADOR. Ejecuta el intento y devuelve el estado actualizado de la notificacion.")
     @PostMapping("/{id}/retry")
     public ResponseEntity<NotificationResponse> retry(
             @PathVariable("id") Integer idNotification,
@@ -243,7 +247,7 @@ public class NotificationController {
             );
         }
 
-        return ResponseEntity.accepted().body(
+        return ResponseEntity.ok(
                 notificationService.retryNotification(idNotification)
         );
     }

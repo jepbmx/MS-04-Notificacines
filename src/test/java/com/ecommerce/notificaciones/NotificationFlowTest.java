@@ -64,7 +64,7 @@ class NotificationFlowTest {
     @Test void creationReadingAndRetryRequestRespectThePeerContract() throws Exception {
         int id = id(create("DEMO_FAIL_ONCE", "flow"));
         assertEquals(1, notifications.count()); assertEquals(1, attempts.count());
-        mvc.perform(get("/api/notifications/{id}/status", id).header("Authorization", token(4,"CLIENTE")))
+        mvc.perform(get("/api/notifications/{id}/status", id).header("Authorization", token(4,"ADMINISTRADOR")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("FAILED"))
                 .andExpect(jsonPath("$.willRetry").value(true));
         var read = mvc.perform(patch("/api/notifications/{id}/read", id).header("Authorization", token(4,"CLIENTE")))
@@ -73,13 +73,13 @@ class NotificationFlowTest {
         mvc.perform(patch("/api/notifications/{id}/read", id).header("Authorization", token(4,"CLIENTE")))
                 .andExpect(jsonPath("$.readAt").value(readAt));
         mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization", token(4,"ADMINISTRADOR")))
-                .andExpect(status().isAccepted()).andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.status").value("PENDING")).andExpect(jsonPath("$.read").value(true));
-        assertEquals(1, notifications.count()); assertEquals(1, attempts.count()); assertEquals(1, events.count());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.status").value("SENT")).andExpect(jsonPath("$.read").value(true));
+        assertEquals(1, notifications.count()); assertEquals(2, attempts.count()); assertEquals(1, events.count());
         mvc.perform(post("/api/notifications").header("Authorization", token(4,"SERVICE"))
                 .header("Idempotency-Key", "flow").contentType("application/json").content(body("DEMO_FAIL_ONCE")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id));
-        assertEquals(1, attempts.count());
+        assertEquals(2, attempts.count());
         mvc.perform(post("/api/notifications").header("Authorization", token(4,"SERVICE"))
                 .header("Idempotency-Key", "flow").contentType("application/json").content(body("OTHER")))
                 .andExpect(status().isConflict());
@@ -89,9 +89,17 @@ class NotificationFlowTest {
         int id = id(create("DEMO_ALWAYS_FAIL", "limit"));
         String admin = token(4,"ADMINISTRADOR");
         mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
-                .andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("FAILED"));
         assertEquals(1,notifications.findById(id).orElseThrow().getRetryCount());
-        assertEquals(1,attempts.count());
+        assertEquals(2,attempts.count());
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("FAILED"));
+        assertEquals(2,notifications.findById(id).orElseThrow().getRetryCount());
+        assertEquals(3,attempts.count());
+        mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("FAILED"));
+        assertEquals(3,notifications.findById(id).orElseThrow().getRetryCount());
+        assertEquals(4,attempts.count());
         mvc.perform(post("/api/notifications/{id}/retry", id).header("Authorization",admin))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_RETRYABLE"));
         var exhausted=notifications.findById(id).orElseThrow();

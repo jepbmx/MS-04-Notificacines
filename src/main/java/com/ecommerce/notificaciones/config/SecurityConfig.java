@@ -58,12 +58,14 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/notifications/*/retry")
                         .hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/*/status")
+                        .hasRole("ADMINISTRADOR")
 
                         // POST: únicamente SERVICE o ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/notifications")
                         .hasAnyRole("SERVICE", "ADMINISTRADOR")
 
-                        // GET y PATCH: cualquier usuario autenticado
+                        // El estado es administrativo; otras consultas requieren autenticación.
                         .requestMatchers(
                                 HttpMethod.GET, "/api/notifications/me"
                         ).authenticated()

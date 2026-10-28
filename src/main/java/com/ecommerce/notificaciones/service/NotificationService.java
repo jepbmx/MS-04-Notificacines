@@ -248,6 +248,7 @@ public class NotificationService {
         }
 
         notification.prepareRetry();
+        deliveryService.deliver(notification);
         return NotificationResponse.from(notificationRepository.save(notification));
     }
 
@@ -331,6 +332,21 @@ public class NotificationService {
 
         Notifications notification = notificationRepository
                 .findByIdNotificationAndIdReceiver(idNotification, idReceiver)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "NOTIFICATION_NOT_FOUND",
+                        "Notificación no encontrada"
+                ));
+
+        return NotificationStatusResponse.from(notification);
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationStatusResponse getNotificationStatusForAdmin(
+            Integer idNotification
+    ) {
+        Notifications notification = notificationRepository
+                .findById(idNotification)
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND,
                         "NOTIFICATION_NOT_FOUND",
