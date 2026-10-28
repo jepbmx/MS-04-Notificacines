@@ -2,7 +2,7 @@
 -- Datos sinteticos; no borra ni actualiza registros existentes.
 -- Cada ejecucion crea un lote nuevo con IDs asignados por MySQL.
 USE ecommerce;
-SET NAMES utf8mb4;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 START TRANSACTION;
 SET @lote = CONCAT('qa-final-', UUID());
 SET @ahora = UTC_TIMESTAMP(6);
