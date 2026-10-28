@@ -40,9 +40,9 @@ public class JwtTestGenerator {
         }
 
         // Datos simulados del usuario autenticado
-        Long userId = 1L;
-        String email = "cliente@ejemplo.com";
-        String role = "CLIENTE";
+        Long userId = 4L;
+        String email = "usuario4@ejemplo.com";
+        String role = "USUARIO";
 
         Instant now = Instant.now();
 
