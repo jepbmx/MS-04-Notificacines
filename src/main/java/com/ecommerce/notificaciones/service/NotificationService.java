@@ -6,6 +6,7 @@ import com.ecommerce.notificaciones.dto.NotificationResponse;
 import com.ecommerce.notificaciones.dto.NotificationStatusResponse;
 import com.ecommerce.notificaciones.exception.ApiException;
 import com.ecommerce.notificaciones.model.NotificationTemplates;
+import com.ecommerce.notificaciones.model.NotificationStatus;
 import com.ecommerce.notificaciones.model.Notifications;
 import com.ecommerce.notificaciones.model.ProcessedEvents;
 import com.ecommerce.notificaciones.repository.NotificationRepository;
@@ -169,6 +170,51 @@ public class NotificationService {
         return notificationRepository
                 .findByIdReceiver(idReceiver, pageable)
                 .map(NotificationResponse::from);
+    }
+
+    // GET /api/notifications?type=...&status=...&read=...
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> searchMyNotifications(
+            String idReceiver,
+            String type,
+            NotificationStatus status,
+            Boolean read,
+            Pageable pageable
+    ) {
+        if (idReceiver == null || idReceiver.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El identificador del usuario es obligatorio"
+            );
+        }
+
+        String normalizedType = type == null || type.isBlank()
+                ? null
+                : type.trim();
+        return notificationRepository.searchByReceiverAndFilters(
+                        idReceiver, normalizedType, status, read, pageable
+                )
+                .map(NotificationResponse::from);
+    }
+
+    // GET /api/notifications/{id}
+    @Transactional(readOnly = true)
+    public NotificationResponse getNotificationById(
+            Integer idNotification,
+            String idReceiver
+    ) {
+        if (idReceiver == null || idReceiver.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El identificador del usuario es obligatorio"
+            );
+        }
+
+        return notificationRepository
+                .findByIdNotificationAndIdReceiver(idNotification, idReceiver)
+                .map(NotificationResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Notificación no encontrada"
+                ));
     }
 
     // PATCH /api/notifications/{id}/read
