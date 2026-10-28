@@ -1,3 +1,4 @@
+
 package com.ecommerce.notificaciones.security;
 
 import com.nimbusds.jose.JWSAlgorithm;
@@ -6,8 +7,8 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
 
@@ -23,7 +24,8 @@ public class JwtTestGenerator {
             );
         }
 
-        byte[] key = Base64.getDecoder().decode(secret);
+        // Mismo tratamiento del secreto que Users-MS
+        byte[] key = secret.getBytes(StandardCharsets.UTF_8);
 
         if (key.length < 32) {
             throw new IllegalArgumentException(
@@ -32,7 +34,7 @@ public class JwtTestGenerator {
         }
 
         // Datos simulados del usuario autenticado
-        Long userId = 1L;
+        Long userId = 2L;
         String email = "cliente@ejemplo.com";
         String role = "CLIENTE";
 

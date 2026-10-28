@@ -1,3 +1,4 @@
+
 package com.ecommerce.notificaciones.security;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +11,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class JwtConfig {
@@ -19,7 +20,7 @@ public class JwtConfig {
     public JwtDecoder jwtDecoder(
             @Value("${jwt.secret}") String secret) {
 
-        byte[] keyBytes = Base64.getDecoder().decode(secret);
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
 
         if (keyBytes.length < 32) {
             throw new IllegalArgumentException(
